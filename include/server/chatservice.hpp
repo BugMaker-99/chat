@@ -8,6 +8,7 @@
 
 #include "json.hpp"
 #include "usermodel.hpp"
+#include "offlinemessagemodel.hpp"
 
 using namespace std;
 using namespace muduo;
@@ -25,8 +26,12 @@ class ChatService{
         void reg(const TcpConnectionPtr& conn, const json& js, const Timestamp& time);
         // 处理登录业务
         void login(const TcpConnectionPtr& conn, const json& js, const Timestamp& time);
+        // 点对点聊天业务
+        void oneChat(const TcpConnectionPtr& conn, const json& js, const Timestamp& time);
         // 获取消息对应的回调函数
         MsgHandler getHandler(int msgid);
+        // 处理客户端异常退出
+        void clientCloseException(const TcpConnectionPtr& conn);
 
     private:
         // 在构造函数里面把消息id对应的业务处理方法存放到_msgHandlerMap
@@ -36,6 +41,8 @@ class ChatService{
 
         // 数据操作类对象
         UserModel _userModel;
+        // 操作数据库存储离线消息对象
+        OfflineMsgModel _offlineMsgModel;
 
         // 互斥锁保证_userConnMap的线程安全
         mutex _connMutex;

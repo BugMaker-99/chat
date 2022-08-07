@@ -1,8 +1,10 @@
 #include <muduo/base/Logging.h>
+#include <vector>
 
 #include "chatservice.hpp"
 #include "public.hpp"
 
+using namespace std;
 using namespace muduo;
 
 ChatService* ChatService::instance(){
@@ -15,6 +17,7 @@ ChatService* ChatService::instance(){
 ChatService::ChatService(){
     _msgHandlerMap.insert({LOGIN_MSG, std::bind(&ChatService::login, this, _1, _2, _3)});
     _msgHandlerMap.insert({REG_MSG, std::bind(&ChatService::reg, this, _1, _2, _3)});
+    _msgHandlerMap.insert({ONE_CHAT_MSG, std::bind(&ChatService::oneChat, this, _1, _2, _3)});
 }
 
 MsgHandler ChatService::getHandler(int msgid){
@@ -47,7 +50,7 @@ void ChatService::reg(const TcpConnectionPtr& conn, const json& js, const Timest
         // 注册成功
         response["msgid"] = REG_MSG_ACK;
         response["errno"] = 0;                // 0表示成功
-        response["id"] = user.getId();
+        response["id"] = user.getId();        // 注册成功后需要给用户返回id号，用于登录
         conn->send(response.dump());
     }else{
         // 注册失败
@@ -89,6 +92,15 @@ void ChatService::login(const TcpConnectionPtr& conn, const json& js, const Time
             response["errno"] = 0;                // 0表示成功
             response["id"] = user.getId();
             response["name"] = user.getName();
+
+            // 登录成功，查询当前用户是否有离线消息
+            vector<string> vec = _offlineMsgModel.query(user.getId());
+            if(!vec.empty()){
+                // vec中存储在数据库表offlinemessage中查询的离线消息，用response返回给客户端，并删除数据库表中当前用户所有的离线消息
+                response["offlinemsg"] = vec;
+                _offlineMsgModel.remove(id);
+            }
+            // send返回给客户端
             conn->send(response.dump());
         }
     }else{
@@ -98,4 +110,46 @@ void ChatService::login(const TcpConnectionPtr& conn, const json& js, const Time
         response["errmsg"] = "用户名或密码错误"; 
         conn->send(response.dump());
     }
+}
+
+void ChatService::clientCloseException(const TcpConnectionPtr& conn){
+    // 处理客户端没有发送json请求时的异常退出
+    // 在_userConnMap中整表搜索，删除conn对应的键值对，并将数据库中conn对应的用户状态修改为offline
+
+    // 可能有的用户正在登录，线程正在写_userConnMap，在多线程环境中需要保证_userConnMap的线程安全
+    User user;
+    {
+        lock_guard<mutex> lock(_connMutex);
+        for(auto it = _userConnMap.begin(); it != _userConnMap.end(); ++it){
+            if(it->second == conn){
+                // 找到异常退出的用户连接，并删除_userConnMap对应的键值对
+                user.setId(it->first);
+                _userConnMap.erase(it->first);
+                break;
+            }
+        }
+    }
+    // 更新数据库中的state
+    if(user.getId() != -1){
+        // 在for循环中没找到conn对应的user，默认构造的user的id = -1
+        user.setState("offline");
+        _userModel.updateState(user);
+    }
+}
+
+// 点对点聊天业务
+void ChatService::oneChat(const TcpConnectionPtr& conn, const json& js, const Timestamp& time){
+    int toid = js["to"].get<int>();
+    {
+        lock_guard<mutex> lock(_connMutex);
+        auto it = _userConnMap.find(toid);
+        if(it != _userConnMap.end()){
+            // 接收者在线，需要进行转发
+            it->second->send(js.dump());
+            return;
+        }
+            
+    }
+    // 接收者不在线，需要存储离线消息
+    _offlineMsgModel.insert(toid, js.dump());
 }

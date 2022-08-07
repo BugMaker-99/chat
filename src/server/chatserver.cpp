@@ -28,7 +28,9 @@ void ChatServer::start(){
 }
 
 void ChatServer::onConnection(const TcpConnectionPtr& conn){
+    // 客户端已经断开连接
     if(!conn->connected()){
+        ChatService::instance()->clientCloseException(conn);
         conn->shutdown();  // 关闭套接字的写端
     }
 }
