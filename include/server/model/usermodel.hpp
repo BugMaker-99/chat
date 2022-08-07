@@ -8,10 +8,12 @@ class UserModel{
     public:
         // User表的增加方法
         bool insert(User& user);
-        
 
-    private:
+        // 根据用户id查询用户信息
+        User query(int id);
 
+        // 登录成功后，更新数据库中的用户在线状态
+        bool updateState(User user);
 };
 
 #endif

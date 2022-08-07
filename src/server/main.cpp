@@ -10,6 +10,5 @@ int main(){
 
     server.start();
     loop.loop();
-
     return 0;
 }

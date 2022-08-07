@@ -41,6 +41,7 @@ void ChatServer::onMessage(const TcpConnectionPtr& conn, Buffer* buffer, Timesta
     // 我们这里不对msgid进行判断以及调用响应处理方法，这会导致网络模块代码和业务模块代码强耦合在一起
     // 我们这样处理：在业务模块给每一个msgid预置一个回调，根据msgid的值执行相应的回调函数，网络模块不可见
     // 这行代码获取msgid对应的方法，并调用
+    
     auto handler = ChatService::instance()->getHandler(js["msgid"].get<int>());
     handler(conn, js, time);
 }
