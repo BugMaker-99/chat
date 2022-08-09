@@ -70,3 +70,15 @@ bool UserModel::updateState(User user){
     
     return false;
 }
+
+// 服务器异常退出，将user表中的state都设置为offline
+void UserModel::resetState(){
+    // 1. 组装SQL语句
+    char sql[1024] = "update user set state='offline' where state='online'";
+    
+    // 2. 使用MySQL对象操作数据库
+    MySQL mysql;
+    if(mysql.connect()){
+        mysql.update(sql);
+    }
+}

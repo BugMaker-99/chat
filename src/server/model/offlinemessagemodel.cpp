@@ -6,8 +6,8 @@ void OfflineMsgModel::insert(int userid, string msg){
     // 1. 组装SQL语句
     char sql[1024] = {0};
     // 此处刚注册，还没有登录，肯定是offline，我们在User类的构造函数里state默认为offline
-    sprintf(sql, "insert into offlinemessage values('%d', '%s')", userid, msg.c_str());
-    
+    sprintf(sql, "insert into offlinemessage values(%d, '%s')", userid, msg.c_str());
+
     // 2. 使用MySQL对象操作数据库
     MySQL mysql;
     if(mysql.connect()){

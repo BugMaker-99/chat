@@ -8,6 +8,8 @@
 
 #include "json.hpp"
 #include "usermodel.hpp"
+#include "friendmodel.hpp"
+#include "groupmodel.hpp"
 #include "offlinemessagemodel.hpp"
 
 using namespace std;
@@ -26,12 +28,28 @@ class ChatService{
         void reg(const TcpConnectionPtr& conn, const json& js, const Timestamp& time);
         // 处理登录业务
         void login(const TcpConnectionPtr& conn, const json& js, const Timestamp& time);
+        //处理注销业务
+        void logout(const TcpConnectionPtr &conn, const json& js, const Timestamp& time);
+
         // 点对点聊天业务
         void oneChat(const TcpConnectionPtr& conn, const json& js, const Timestamp& time);
+        // 添加好友业务
+        void addFriend(const TcpConnectionPtr& conn, const json& js, const Timestamp& time);
+
+        // 创建群组业务
+        void createGroup(const TcpConnectionPtr& conn, const json& js, const Timestamp& time);
+        // 加入群组业务
+        void joinGroup(const TcpConnectionPtr& conn, const json& js, const Timestamp& time);
+        // 群组聊天业务
+        void groupChat(const TcpConnectionPtr& conn, const json& js, const Timestamp& time);
+        
         // 获取消息对应的回调函数
         MsgHandler getHandler(int msgid);
+
         // 处理客户端异常退出
         void clientCloseException(const TcpConnectionPtr& conn);
+        // 处理服务器异常退出
+        void reset();
 
     private:
         // 在构造函数里面把消息id对应的业务处理方法存放到_msgHandlerMap
@@ -43,6 +61,10 @@ class ChatService{
         UserModel _userModel;
         // 操作数据库存储离线消息对象
         OfflineMsgModel _offlineMsgModel;
+        // 操作friend表的对象
+        FriendModel _friendModel;
+        // 操作allgroup和groupuser的对象
+        GroupModel _groupModel;
 
         // 互斥锁保证_userConnMap的线程安全
         mutex _connMutex;
