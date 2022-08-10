@@ -226,7 +226,6 @@ void doLoginResponse(json &responsejs)
         if (responsejs.contains("groups"))
         {            
             vector<string> vec1 = responsejs["groups"];
-            cout << responsejs["groups"] << endl;
 
             for (string &groupstr : vec1)
             {

@@ -6,6 +6,7 @@
 #include <functional>
 #include <mutex>
 
+#include "redis.hpp"
 #include "json.hpp"
 #include "usermodel.hpp"
 #include "friendmodel.hpp"
@@ -51,6 +52,9 @@ class ChatService{
         // 处理服务器异常退出
         void reset();
 
+        //从redis消息队列中获取订阅的消息
+        void handleRedisSubscribeMessage(int userid, string msg);
+
     private:
         // 在构造函数里面把消息id对应的业务处理方法存放到_msgHandlerMap
         ChatService();
@@ -70,6 +74,9 @@ class ChatService{
         mutex _connMutex;
         // 存储在线用户的连接
         unordered_map<int, TcpConnectionPtr> _userConnMap;
+
+        //redis操作对象
+        Redis _redis;
 };
 
 #endif

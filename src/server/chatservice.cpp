@@ -21,9 +21,15 @@ ChatService::ChatService(){
     _msgHandlerMap.insert({ONE_CHAT_MSG, std::bind(&ChatService::oneChat, this, _1, _2, _3)});
     _msgHandlerMap.insert({ADD_FRIEND_MSG, std::bind(&ChatService::addFriend, this, _1, _2, _3)});
     
+    // 群组业务
     _msgHandlerMap.insert({CREATE_GROUP_MSG, std::bind(&ChatService::createGroup, this, _1, _2, _3)});
     _msgHandlerMap.insert({JOIN_GROUP_MSG, std::bind(&ChatService::joinGroup, this, _1, _2, _3)});
     _msgHandlerMap.insert({GROUP_CHAT_MSG, std::bind(&ChatService::groupChat, this, _1, _2, _3)});
+
+    if(_redis.connect()){
+        // 连接成功后，注册处理redis上报的消息的回调函数
+        _redis.init_notify_handler(std::bind(&ChatService::handleRedisSubscribeMessage, this, _1, _2));
+    }
 }
 
 MsgHandler ChatService::getHandler(int msgid){
@@ -89,6 +95,9 @@ void ChatService::login(const TcpConnectionPtr& conn, const json& js, const Time
                 lock_guard<mutex> lock(_connMutex);
                 _userConnMap.insert({id, conn});
             }
+
+            // id用户登录后，需要向redis订阅关于id的消息
+            _redis.subscribe(id);
 
             // 登录成功后，需要更新数据库中用户的在线信息
             user.setState("online");
@@ -180,6 +189,10 @@ void ChatService::clientCloseException(const TcpConnectionPtr& conn){
             }
         }
     }
+
+    // 用户异常退出，在redis中取消当前服务器订阅的通道
+    _redis.unsubscribe(user.getId());
+
     // 更新数据库中的state
     if(user.getId() != -1){
         // 在for循环中没找到conn对应的user，默认构造的user的id = -1
@@ -199,6 +212,9 @@ void ChatService::logout(const TcpConnectionPtr &conn, const json& js, const Tim
             _userConnMap.erase(it);
         }
     }
+
+    // 用户退出，在redis中取消当前服务器订阅的通道
+    _redis.unsubscribe(userid);
 
     // 更新用户的状态信息
     User user(userid, "", "", "offline");
@@ -224,8 +240,14 @@ void ChatService::oneChat(const TcpConnectionPtr& conn, const json& js, const Ti
         }
             
     }
-    // 接收者不在线，需要存储离线消息
-    _offlineMsgModel.insert(toid, js.dump());
+    User user = _userModel.query(toid);
+    if(user.getState() == "online"){
+        // toid在其他服务器
+        _redis.publish(toid, js.dump());
+    }else{
+        // 接收者不在线，需要存储离线消息
+        _offlineMsgModel.insert(toid, js.dump());
+    }
 }
 
 // 添加好友业务 msgid  id  friendid
@@ -283,14 +305,35 @@ void ChatService::groupChat(const TcpConnectionPtr& conn, const json& js, const 
     // 读写_userConnMap时，需要保证线程安全
     lock_guard<mutex> lock(_connMutex);
     // 遍历所有的组员，若在线则转发消息，不在线则保存至离线消息表
-    for(int id : useridVec){
-        auto it = _userConnMap.find(id);
+    for(int toid : useridVec){
+        auto it = _userConnMap.find(toid);
         if(it != _userConnMap.end()){
             // 找出连接，直接转发json
             it->second->send(js.dump());
         }else{
-            _offlineMsgModel.insert(id, js.dump());
+            User user = _userModel.query(toid);
+            if(user.getState() == "online"){
+                // toid在其他服务器
+                _redis.publish(toid, js.dump());
+            }else{
+                // 接收者不在线，需要存储离线消息
+                _offlineMsgModel.insert(toid, js.dump());
+            }
         }
     }
 }
 
+// redis上报toid和msg，当前服务器用handleRedisSubscribeMessage处理
+void ChatService::handleRedisSubscribeMessage(int toid, string msg){
+    lock_guard<mutex> lock(_connMutex);
+    // 因为是其他服务器发现toid在线，但是不在那台服务器上，才会将消息publish到消息队列
+    // 然后当前服务器才能执行handleRedisSubscribeMessage拿到消息，一般情况下，toid都是在线的
+    auto it = _userConnMap.find(toid);
+    if (it != _userConnMap.end()){
+        it->second->send(msg);
+    }else{
+        // 也许就是其他服务器publish后，当前服务器拿到msg前，toid下线了
+        // 才可能需要存储该用户的离线消息
+        _offlineMsgModel.insert(toid, msg);
+    }
+}
