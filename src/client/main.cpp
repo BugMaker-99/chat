@@ -7,6 +7,7 @@
 #include <ctime>
 #include <unordered_map>
 #include <functional>
+
 using namespace std;
 using json = nlohmann::json;
 
@@ -85,6 +86,8 @@ int main(int argc, char **argv)
     }
 
     // 初始化读写线程通信用的信号量
+    // int sem_init(sem_t *__sem, int __pshared, unsigned int __value)
+    // __pshared:进程还是线程通信
     sem_init(&rwsem, 0, 0);
 
     // 连接服务器成功，启动接收子线程

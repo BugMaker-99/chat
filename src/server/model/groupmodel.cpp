@@ -1,4 +1,4 @@
-#include "db.hpp"
+#include "connectionpool.hpp"
 #include "groupmodel.hpp"
 
 // 创建群组
@@ -7,15 +7,14 @@ bool GroupModel::createGroup(Group& group){
     sprintf(sql, "insert into allgroup(groupname, groupdesc) values('%s', '%s')", 
             group.getName().c_str(), group.getDesc().c_str());
     
-    MySQL mysql;
-    if(mysql.connect()){
-        if(mysql.update(sql)){
-            // 组名不允许重复，若重复，则update返回false，群组创建失败
-            // 若群组创建成功，则把群id带回，调用网络接口发送给用户
-            group.setId(mysql_insert_id(mysql.getConnection()));
-            return true;
-        }
+    shared_ptr<MySQL> conn_ptr = ConnectionPool::get_connection_pool()->get_connection();
+    if(conn_ptr->update(sql)){
+        // 组名不允许重复，若重复，则update返回false，群组创建失败
+        // 若群组创建成功，则把群id带回，调用网络接口发送给用户
+        group.setId(mysql_insert_id(conn_ptr->getConnection()));
+        return true;
     }
+    
     return false;
 }
 
@@ -25,10 +24,8 @@ void GroupModel::joinGroup(int userid, int groupid, string role){
     sprintf(sql, "insert into groupuser values(%d, %d, '%s')",
             groupid, userid, role.c_str());
     
-    MySQL mysql;
-    if(mysql.connect()){
-        mysql.update(sql);
-    }
+    shared_ptr<MySQL> conn_ptr = ConnectionPool::get_connection_pool()->get_connection();
+    conn_ptr->update(sql);
 }
 
 // 查询userid用户所在所有群组的信息
@@ -43,43 +40,42 @@ vector<Group> GroupModel::queryGroups(int userid){
     sprintf(sql, "select a.id, a.groupname, a.groupdesc from allgroup a inner join groupuser b on a.id=b.groupid where b.userid=%d", userid);
     
     vector<Group> groupVec;
-    MySQL mysql;
-    if(mysql.connect()){
-        // malloc申请了资源，需要释放
-        MYSQL_RES* res = mysql.query(sql);
+    shared_ptr<MySQL> conn_ptr = ConnectionPool::get_connection_pool()->get_connection();
+    // malloc申请了资源，需要释放
+    MYSQL_RES* res = conn_ptr->query(sql);
+    if(res != nullptr){
+        MYSQL_ROW row;
+        Group group;
+        while((row = mysql_fetch_row(res)) != nullptr){
+            group.setId(atoi(row[0]));
+            group.setName(row[1]);
+            group.setDesc(row[2]);
+            groupVec.push_back(group);
+        }
+        // 释放结果集占用的资源
+        mysql_free_result(res);
+    }
+
+    // 2. 再根据群组信息，查询属于该群组的所有用户的userid，并且和user表进行联合查询，查出用户的详细信息
+    for(Group& group : groupVec){
+        sprintf(sql, "select a.id, a.name, a.state, b.grouprole from user a inner join groupuser b on a.id=b.userid where b.groupid=%d", group.getId());
+
+        MYSQL_RES* res = conn_ptr->query(sql);
         if(res != nullptr){
             MYSQL_ROW row;
-            Group group;
+            GroupUser guser;
             while((row = mysql_fetch_row(res)) != nullptr){
-                group.setId(atoi(row[0]));
-                group.setName(row[1]);
-                group.setDesc(row[2]);
-                groupVec.push_back(group);
+                guser.setId(atoi(row[0]));
+                guser.setName(row[1]);
+                guser.setState(row[2]);
+                guser.setRole(row[3]);
+                group.getUsers().push_back(guser);
             }
             // 释放结果集占用的资源
             mysql_free_result(res);
         }
-
-        // 2. 再根据群组信息，查询属于该群组的所有用户的userid，并且和user表进行联合查询，查出用户的详细信息
-        for(Group& group : groupVec){
-            sprintf(sql, "select a.id, a.name, a.state, b.grouprole from user a inner join groupuser b on a.id=b.userid where b.groupid=%d", group.getId());
-
-            MYSQL_RES* res = mysql.query(sql);
-            if(res != nullptr){
-                MYSQL_ROW row;
-                GroupUser guser;
-                while((row = mysql_fetch_row(res)) != nullptr){
-                    guser.setId(atoi(row[0]));
-                    guser.setName(row[1]);
-                    guser.setState(row[2]);
-                    guser.setRole(row[3]);
-                    group.getUsers().push_back(guser);
-                }
-                // 释放结果集占用的资源
-                mysql_free_result(res);
-            }
-        }
     }
+    
 
     return groupVec;
 }
@@ -91,18 +87,17 @@ vector<int> GroupModel::queryGroupUsers(int userid, int groupid){
     sprintf(sql, "select userid from groupuser where groupid=%d and userid!=%d", groupid, userid);
     
     vector<int> useridVec;
-    MySQL mysql;
-    if(mysql.connect()){
-        // malloc申请了资源，需要释放
-        MYSQL_RES* res = mysql.query(sql);
-        if(res != nullptr){
-            MYSQL_ROW row;
-            while((row = mysql_fetch_row(res)) != nullptr){
-                useridVec.push_back(atoi(row[0]));
-            }
-            // 释放结果集占用的资源
-            mysql_free_result(res);
+    shared_ptr<MySQL> conn_ptr = ConnectionPool::get_connection_pool()->get_connection();
+    // malloc申请了资源，需要释放
+    MYSQL_RES* res = conn_ptr->query(sql);
+    if(res != nullptr){
+        MYSQL_ROW row;
+        while((row = mysql_fetch_row(res)) != nullptr){
+            useridVec.push_back(atoi(row[0]));
         }
+        // 释放结果集占用的资源
+        mysql_free_result(res);
     }
+
     return useridVec;
 }

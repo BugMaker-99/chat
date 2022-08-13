@@ -1,2 +1,4 @@
+rm -rf *
 cmake ..
 make
+

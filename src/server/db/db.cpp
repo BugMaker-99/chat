@@ -3,26 +3,29 @@
 #include "db.hpp"
 
 //数据库配置信息
-static string server = "127.0.0.1";
-static string user = "root";
-static string password = "123456";
-static string dbname = "chat";
+// static string server = "127.0.0.1";
+// static string user = "root";
+// static string password = "123456";
+// static string dbname = "chat";
 
 //初始化数据库连接
 MySQL::MySQL(){
-    _conn = mysql_init(nullptr);
+    // 实际上是malloc了一个MYSQL结构体大小的指针
+    _conn = mysql_init(nullptr); 
 }
 
 //释放数据库连接资源
 MySQL::~MySQL(){
-    if (_conn != nullptr)
+    if (_conn != nullptr){
         mysql_close(_conn);
+        LOG_INFO << "a MYSQL connection closed";
+    }
 }
 
 //连接数据库
-bool MySQL::connect(){
-    MYSQL *p = mysql_real_connect(_conn, server.c_str(), user.c_str(),
-                                  password.c_str(), dbname.c_str(), 3306, nullptr, 0);
+bool MySQL::connect(string ip, unsigned short port, string username, string password, string dbname){
+    MYSQL *p = mysql_real_connect(_conn, ip.c_str(), username.c_str(),
+                        password.c_str(), dbname.c_str(), port, nullptr, 0);
     if (p != nullptr){
         //C和C++代码默认的编码字符是ASCII，如果不设置，从MySQL上拉下来的中文显示？
         mysql_query(_conn, "set names gbk");

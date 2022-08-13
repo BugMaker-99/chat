@@ -12,6 +12,7 @@
 #include "friendmodel.hpp"
 #include "groupmodel.hpp"
 #include "offlinemessagemodel.hpp"
+#include "connectionpool.hpp"
 
 using namespace std;
 using namespace muduo;
@@ -58,6 +59,9 @@ class ChatService{
     private:
         // 在构造函数里面把消息id对应的业务处理方法存放到_msgHandlerMap
         ChatService();
+
+        static ChatService _service;
+
         // 存储消息id和其对应的业务处理方法
         unordered_map<int, MsgHandler> _msgHandlerMap;
 

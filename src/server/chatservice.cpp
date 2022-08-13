@@ -7,10 +7,12 @@
 using namespace std;
 using namespace muduo;
 
+// 静态成员类外初始化
+ChatService ChatService::_service;
+
 ChatService* ChatService::instance(){
     // 线程安全的单例对象
-    static ChatService service;
-    return &service;
+    return &_service;
 }
 
 // 在构造函数里面把消息id对应的业务处理方法存放到_msgHandlerMap
