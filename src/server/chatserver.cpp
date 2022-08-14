@@ -30,7 +30,7 @@ void ChatServer::start(){
 void ChatServer::onConnection(const TcpConnectionPtr& conn){
     // 客户端已经断开连接
     if(!conn->connected()){
-        ChatService::instance()->clientCloseException(conn);
+        ChatService::getInstance()->clientCloseException(conn);
         conn->shutdown();  // 关闭套接字的写端
     }
 }
@@ -44,6 +44,6 @@ void ChatServer::onMessage(const TcpConnectionPtr& conn, Buffer* buffer, Timesta
     // 我们这样处理：在业务模块给每一个msgid预置一个回调，根据msgid的值执行相应的回调函数，网络模块不可见
     // 这行代码获取msgid对应的方法，并调用
     
-    auto handler = ChatService::instance()->getHandler(js["msgid"].get<int>());
+    auto handler = ChatService::getInstance()->getHandler(js["msgid"].get<int>());
     handler(conn, js, time);
 }

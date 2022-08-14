@@ -27,14 +27,16 @@ public:
 	// 还需要重定义智能指针的删除方式，把连接归还到队列
 	shared_ptr<MySQL> get_connection();
 
+	~ConnectionPool();
+
 private:
 	ConnectionPool();               // 单例模式，构造函数私有化
-	~ConnectionPool();
+	
 	bool load_config();             // 从配置文件中加载数据
 	void produce_conn_task();       // 运行在独立的线程中，负责生产新的连接
 	void scan_conn_task();          // 扫描超过空闲时间_max_idle_time的连接进行回收
 
-	static ConnectionPool _pool;    // 单例
+	static ConnectionPool* volatile  _pool;    // 单例
 
 	string _ip;
 	unsigned short _port;

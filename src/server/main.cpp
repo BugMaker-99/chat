@@ -1,5 +1,7 @@
 #include "chatserver.hpp"
 #include "chatservice.hpp"
+#include "connectionpool.hpp"
+
 #include <iostream>
 #include <signal.h>
 
@@ -7,7 +9,12 @@ using namespace std;
 
 // 处理服务器ctrl c结束的方法
 void resetHandler(int){
-    ChatService::instance()->reset();
+    ChatService::getInstance()->reset();
+    // delete new出来的单例
+    delete ChatService::getInstance();
+    delete ConnectionPool::get_connection_pool();
+    
+    // exit后，所有的.stack段变量被回收、.data段的单例对象会出作用域执行析构
     exit(0);
 }
 

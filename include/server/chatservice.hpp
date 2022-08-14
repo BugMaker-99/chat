@@ -25,7 +25,7 @@ using MsgHandler = std::function<void(const TcpConnectionPtr&, const json&, cons
 class ChatService{
     public:
         // 获取单例对象的接口函数
-        static ChatService* instance();
+        static ChatService* getInstance();
         // 处理注册业务
         void reg(const TcpConnectionPtr& conn, const json& js, const Timestamp& time);
         // 处理登录业务
@@ -56,11 +56,13 @@ class ChatService{
         //从redis消息队列中获取订阅的消息
         void handleRedisSubscribeMessage(int userid, string msg);
 
+        // ~ChatService();
+
     private:
         // 在构造函数里面把消息id对应的业务处理方法存放到_msgHandlerMap
         ChatService();
 
-        static ChatService _service;
+        static ChatService* volatile _service;
 
         // 存储消息id和其对应的业务处理方法
         unordered_map<int, MsgHandler> _msgHandlerMap;

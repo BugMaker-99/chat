@@ -3,11 +3,14 @@
 
 #include "connectionpool.hpp"
 
-ConnectionPool ConnectionPool::_pool;
+ConnectionPool* volatile ConnectionPool::_pool = nullptr;
 
 // 饿汉式单例模式接口
 ConnectionPool* ConnectionPool::get_connection_pool() {
-	return &_pool;
+	if (_pool == nullptr) {
+		_pool = new ConnectionPool();// 堆区
+	}
+	return _pool;
 }
 
 // 连接池的构造
