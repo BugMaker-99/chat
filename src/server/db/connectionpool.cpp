@@ -1,5 +1,6 @@
 #include <iostream>
 #include <muduo/base/Logging.h>
+
 #include "connectionpool.hpp"
 
 ConnectionPool ConnectionPool::_pool;
@@ -8,9 +9,11 @@ ConnectionPool ConnectionPool::_pool;
 ConnectionPool* ConnectionPool::get_connection_pool() {
 	return &_pool;
 }
- 
+
 // 连接池的构造
 ConnectionPool::ConnectionPool() {
+	_is_exit = false;
+
 	// 加载配置项
 	if (!load_config()) {
 		return;
@@ -35,11 +38,15 @@ ConnectionPool::ConnectionPool() {
 }
 
 ConnectionPool::~ConnectionPool(){
+	unique_lock<mutex> lock(_queue_mutex);
 	while(!_connection_queue.empty()){
 		MySQL* conn = _connection_queue.front();
-		conn->~MySQL();
 		_connection_queue.pop();
+		conn->~MySQL();
 	}
+	_is_exit = true;
+	_connection_cnt = 0;
+	_cv.notify_all();     // 通知wait的线程起来退出
 }
 
 // 从配置文件中加载数据
@@ -102,7 +109,13 @@ void ConnectionPool::produce_conn_task() {
 		unique_lock<mutex> lock(_queue_mutex);
 		while (!_connection_queue.empty()) {
 			// 连接队列不空（还有可以使用的连接），生产线程进入等待状态，并且释放互斥锁
-			_cv.wait(lock);       
+			_cv.wait(lock);
+		}
+
+		// 队列空了，是因为析构函数执行了，就不再产生新的连接，直接退出
+		if(_is_exit){
+			LOG_INFO << "ConnectionPool::produce_conn_task thread exit";
+			break;
 		}
 		
 		// 只有当前连接小于_max_size才创建
@@ -123,6 +136,11 @@ void ConnectionPool::scan_conn_task() {
 	while (true) {
 		// 定时检查队列超时的连接
 		this_thread::sleep_for(chrono::seconds(_max_idle_time));
+		if(_is_exit){
+			// 线程睡醒了发现服务器已经退出了，当前线程也退出
+			LOG_INFO << "ConnectionPool::scan_conn_task thread exit";
+			break;
+		}
 		// 访问队列需要加锁
 		unique_lock<mutex> lock(_queue_mutex);
 		while (_connection_cnt > _init_size) {
@@ -147,6 +165,10 @@ shared_ptr<MySQL> ConnectionPool::get_connection() {
 	unique_lock<mutex> lock(_queue_mutex);
 	while (_connection_queue.empty()) {
 		if (cv_status::timeout == _cv.wait_for(lock, chrono::milliseconds(_connection_timeout))) {
+			if(_is_exit){
+				LOG_INFO << "ConnectionPool::get_connection thread exit";
+				break;
+			}
 			if (_connection_queue.empty()) {
 				// 表示经过了_connection_timeout后超时醒来队列依然为空
 				LOG_INFO << "获取连接超时...";

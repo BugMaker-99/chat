@@ -1,4 +1,4 @@
-rm -rf *
+cd build
 cmake ..
 make
 

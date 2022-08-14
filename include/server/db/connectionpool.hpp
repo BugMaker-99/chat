@@ -34,7 +34,7 @@ private:
 	void produce_conn_task();       // 运行在独立的线程中，负责生产新的连接
 	void scan_conn_task();          // 扫描超过空闲时间_max_idle_time的连接进行回收
 
-	static ConnectionPool _pool;    // 单例 
+	static ConnectionPool _pool;    // 单例
 
 	string _ip;
 	unsigned short _port;
@@ -50,6 +50,7 @@ private:
 	mutex _queue_mutex;          // 维护连接队列的线程安全的互斥锁
 	atomic_int _connection_cnt;  // 连接的总数，不会超过_max_size
 	condition_variable _cv;       // 设置条件变量，用于连接生产线程和连接消费线程的通信
+	atomic_bool _is_exit;
 };
 
 #endif
