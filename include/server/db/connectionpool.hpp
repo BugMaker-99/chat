@@ -20,7 +20,7 @@ using namespace std;
 class ConnectionPool {
 public:
 	// 获取连接池对象实例
-	static ConnectionPool* get_connection_pool();
+	static shared_ptr<ConnectionPool> get_connection_pool();
 
 	// 给外部提供接口，从连接池中获取可用的空闲连接
 	// 通过智能指针自动管理外部的连接，不需要用户手动释放
@@ -36,7 +36,7 @@ private:
 	void produce_conn_task();       // 运行在独立的线程中，负责生产新的连接
 	void scan_conn_task();          // 扫描超过空闲时间_max_idle_time的连接进行回收
 
-	static ConnectionPool* volatile  _pool;    // 单例
+	static shared_ptr<ConnectionPool>  _pool;    // 单例
 
 	string _ip;
 	unsigned short _port;

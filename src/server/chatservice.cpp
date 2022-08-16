@@ -8,12 +8,12 @@ using namespace std;
 using namespace muduo;
 
 // 静态成员类外初始化
-ChatService* volatile ChatService::_service = nullptr;
+shared_ptr<ChatService> ChatService::_service = nullptr;
 
-ChatService* ChatService::getInstance(){
+shared_ptr<ChatService> ChatService::getInstance(){
     // 线程安全的单例对象
     if (_service == nullptr) {
-        _service = new ChatService();// 堆区
+        _service = shared_ptr<ChatService>(new ChatService());// 堆区
     }
     return _service;
 }

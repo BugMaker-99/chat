@@ -10,11 +10,7 @@ using namespace std;
 // 处理服务器ctrl c结束的方法
 void resetHandler(int){
     ChatService::getInstance()->reset();
-    // delete new出来的单例
-    delete ChatService::getInstance();
-    delete ConnectionPool::get_connection_pool();
-    
-    // exit后，所有的.stack段变量被回收、.data段的单例对象会出作用域执行析构
+    // exit，所有的.stack段变量被回收、.data段的单例对象会出作用域执行析构，智能指针指向的对象会执行析构函数，并释放对象空间
     exit(0);
 }
 

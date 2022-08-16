@@ -3,12 +3,12 @@
 
 #include "connectionpool.hpp"
 
-ConnectionPool* volatile ConnectionPool::_pool = nullptr;
+shared_ptr<ConnectionPool> ConnectionPool::_pool = nullptr;
 
 // 饿汉式单例模式接口
-ConnectionPool* ConnectionPool::get_connection_pool() {
+shared_ptr<ConnectionPool> ConnectionPool::get_connection_pool() {
 	if (_pool == nullptr) {
-		_pool = new ConnectionPool();// 堆区
+		_pool = shared_ptr<ConnectionPool> (new ConnectionPool());// 堆区
 	}
 	return _pool;
 }
