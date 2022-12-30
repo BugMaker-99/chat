@@ -11,6 +11,8 @@ class GroupModel{
     public:
         // 创建群组
         bool createGroup(Group& group);
+        // 查询群组是否存在
+        bool isGroupExist(int groupid);
         // userid用户加入群组
         void joinGroup(int userid, int groupid, string role);
         // 查询userid用户所在所有群组信息

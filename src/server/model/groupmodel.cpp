@@ -14,8 +14,27 @@ bool GroupModel::createGroup(Group& group){
         group.setId(mysql_insert_id(conn_ptr->getConnection()));
         return true;
     }
-    
+
     return false;
+}
+
+bool GroupModel::isGroupExist(int groupid){
+    // 1. 组装SQL语句
+    char sql[1024] = {0};
+    // 此处刚注册，还没有登录，肯定是offline，我们在User类的构造函数里state默认为offline
+    sprintf(sql, "select count(id) from allgroup where id = %d;", groupid);
+    
+    // 2. 使用MySQL对象操作数据库
+    shared_ptr<MySQL> conn_ptr = ConnectionPool::get_connection_pool()->get_connection();
+    MYSQL_RES* res = conn_ptr->query(sql);
+    if(res != nullptr){
+        MYSQL_ROW row = mysql_fetch_row(res);
+        if(row != nullptr && atoi(row[0]) == 0){
+            // 群组不存在
+            return false;
+        }
+    }
+    return true;
 }
 
 // userid用户加入群组
@@ -75,7 +94,6 @@ vector<Group> GroupModel::queryGroups(int userid){
             mysql_free_result(res);
         }
     }
-    
 
     return groupVec;
 }

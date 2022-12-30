@@ -1,5 +1,6 @@
 #include <muduo/base/Logging.h>
 #include <vector>
+#include <iostream>
 
 #include "chatservice.hpp"
 #include "public.hpp"
@@ -242,7 +243,6 @@ void ChatService::oneChat(const TcpConnectionPtr& conn, const json& js, const Ti
             it->second->send(js.dump());
             return;
         }
-            
     }
     User user = _userModel.query(toid);
     if(user.getState() == "online"){
@@ -293,8 +293,11 @@ void ChatService::createGroup(const TcpConnectionPtr& conn, const json& js, cons
 void ChatService::joinGroup(const TcpConnectionPtr& conn, const json& js, const Timestamp& time){
     int userid = js["id"].get<int>();
     int groupid = js["groupid"].get<int>();
-    // 数据库层访问groupuser，一个用户加入群，添加一条记录
-    _groupModel.joinGroup(userid, groupid, "normal");
+    // 这里最好是先判断群组groupid是否存在
+    if(_groupModel.isGroupExist(groupid)){
+        // 数据库层访问groupuser，一个用户加入群，添加一条记录
+        _groupModel.joinGroup(userid, groupid, "normal");
+    }
 }
 
 // 群组聊天业务
@@ -311,9 +314,10 @@ void ChatService::groupChat(const TcpConnectionPtr& conn, const json& js, const 
     for(int toid : useridVec){
         auto it = _userConnMap.find(toid);
         if(it != _userConnMap.end()){
-            // 找出连接，直接转发json
+            // 登录当前服务器，找出连接，直接转发json
             it->second->send(js.dump());
         }else{
+            // 不在当前服务器，数据库中查询在线状态
             User user = _userModel.query(toid);
             if(user.getState() == "online"){
                 // toid在其他服务器

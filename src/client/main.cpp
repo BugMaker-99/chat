@@ -408,7 +408,8 @@ unordered_map<string, function<void(int, string)>> commandHandlerMap = {
     {"creategroup", creategroup},
     {"joingroup", joingroup},
     {"groupchat", groupchat},
-    {"logout", logout}};
+    {"logout", logout}
+};
 
 // 主聊天页面程序
 void mainMenu(int clientfd)
