@@ -13,7 +13,7 @@ void OfflineMsgModel::insert(int userid, string msg){
     conn_ptr->update(sql);
 }
 
-// 删除用户的离线消息
+// 在数据库中删除用户的离线消息
 void OfflineMsgModel::remove(int userid){
     // 1. 组装SQL语句
     char sql[1024] = {0};
@@ -23,7 +23,6 @@ void OfflineMsgModel::remove(int userid){
     // 2. 使用MySQL对象操作数据库
     shared_ptr<MySQL> conn_ptr = ConnectionPool::get_connection_pool()->get_connection();
     conn_ptr->update(sql);
-    
 }
 
 // 查询用户的离线消息

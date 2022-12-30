@@ -13,7 +13,7 @@ class UserModel{
         User query(int id);
 
         // 登录成功后，更新数据库中的用户在线状态
-        bool updateState(User user);
+        bool updateState(const User& user);
 
         // 重置用户的状态信息
         void resetState();

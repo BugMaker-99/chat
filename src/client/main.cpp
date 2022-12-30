@@ -185,7 +185,7 @@ int main(int argc, char **argv)
 // 处理注册的响应逻辑
 void doRegResponse(json &responsejs)
 {
-    if (0 != responsejs["errno"].get<int>()) // 注册失败
+    if (SUCCESS != responsejs["errno"].get<int>()) // 注册失败
     {
         cerr << "name is already exist, register error!" << endl;
     }
@@ -199,7 +199,7 @@ void doRegResponse(json &responsejs)
 // 处理登录的响应逻辑
 void doLoginResponse(json &responsejs)
 {
-    if (0 != responsejs["errno"].get<int>()) // 登录失败
+    if (SUCCESS != responsejs["errno"].get<int>()) // 登录失败
     {
         cerr << responsejs["errmsg"] << endl;
         g_isLoginSuccess = false;
@@ -283,7 +283,7 @@ void doLoginResponse(json &responsejs)
 }
 
 void doCreateGroupResponse(json &responsejs){
-    if (0 != responsejs["errno"].get<int>()){
+    if (SUCCESS != responsejs["errno"].get<int>()){
         // 创建群失败
         cerr << " the group name" << responsejs["groupname"] << "already exists! create group fail!" << endl;
     }else{
@@ -461,7 +461,7 @@ void addfriend(int clientfd, string str)
     int friendid = atoi(str.c_str());
     json js;
     js["msgid"] = ADD_FRIEND_MSG;
-    js["id"] = g_currentUser.getId();
+    js["userid"] = g_currentUser.getId();
     js["friendid"] = friendid;
     string buffer = js.dump();
 

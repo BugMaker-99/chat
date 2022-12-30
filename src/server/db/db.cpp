@@ -2,7 +2,7 @@
 
 #include "db.hpp"
 
-//数据库配置信息
+// 数据库配置信息
 // static string server = "127.0.0.1";
 // static string user = "root";
 // static string password = "123456";

@@ -8,14 +8,11 @@ using namespace std;
 using namespace muduo;
 
 // 静态成员类外初始化
-shared_ptr<ChatService> ChatService::_service = nullptr;
 
-shared_ptr<ChatService> ChatService::getInstance(){
+ChatService* ChatService::getInstance(){
     // 线程安全的单例对象
-    if (_service == nullptr) {
-        _service = shared_ptr<ChatService>(new ChatService());// 堆区
-    }
-    return _service;
+    static ChatService _service;
+    return &_service;
 }
 
 // 在构造函数里面把消息id对应的业务处理方法存放到_msgHandlerMap
@@ -92,7 +89,7 @@ void ChatService::login(const TcpConnectionPtr& conn, const json& js, const Time
         if(user.getState() == "online"){
             // 用户已经登录，不允许重复登录
             response["msgid"] = LOGIN_MSG_ACK;
-            response["errno"] = 2;                // 2表示重复登录
+            response["errno"] = RELOGIN;
             response["errmsg"] = "this account is using! can not login again!"; 
             conn->send(response.dump());
         }else{
@@ -111,10 +108,10 @@ void ChatService::login(const TcpConnectionPtr& conn, const json& js, const Time
             _userModel.updateState(user);
 
             response["msgid"] = LOGIN_MSG_ACK;
-            response["errno"] = 0;                // 0表示成功
+            response["errno"] = SUCCESS;                // 0表示成功
             response["id"] = user.getId();
             response["name"] = user.getName();
-
+ 
             // 登录成功，查询当前用户是否有离线消息
             vector<string> msgVec = _offlineMsgModel.query(id);
             if(!msgVec.empty()){
@@ -173,7 +170,7 @@ void ChatService::login(const TcpConnectionPtr& conn, const json& js, const Time
     }else{
         // 登录失败
         response["msgid"] = LOGIN_MSG_ACK;
-        response["errno"] = 1;                // 1表示失败
+        response["errno"] = FAIL;                // 1表示失败
         response["errmsg"] = "id or password error!"; 
         conn->send(response.dump());
     }
@@ -261,7 +258,6 @@ void ChatService::oneChat(const TcpConnectionPtr& conn, const json& js, const Ti
 void ChatService::addFriend(const TcpConnectionPtr& conn, const json& js, const Timestamp& time){
     int userid = js["userid"].get<int>();
     int friendid = js["friendid"].get<int>();
-
     _friendModel.insert(userid, friendid);
     _friendModel.insert(friendid, userid);
 }

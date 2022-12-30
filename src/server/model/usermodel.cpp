@@ -10,7 +10,7 @@ bool UserModel::insert(User& user){
         user.getName().c_str(), user.getPwd().c_str(), user.getState().c_str());
     
     // 2. 使用MySQL对象操作数据库
-    shared_ptr<MySQL> conn_ptr = ConnectionPool::get_connection_pool()->get_connection();
+    shared_ptr<MySQL> conn_ptr = ConnectionPool::get_connection_pool()->get_connection();  // 出作用域时，会调用自定义删除器，把连接归还到连接池
 
     // if(conn_ptr.connect()){
     //     if(conn_ptr.update(sql)){
@@ -79,7 +79,7 @@ User UserModel::query(int id){
 }
 
 // 登录成功后，更新数据库中的用户在线状态
-bool UserModel::updateState(User user){
+bool UserModel::updateState(const User& user){
     // 1. 组装SQL语句
     char sql[1024] = {0};
     // 此处刚注册，还没有登录，肯定是offline，我们在User类的构造函数里state默认为offline
@@ -90,7 +90,6 @@ bool UserModel::updateState(User user){
     if(conn_ptr->update(sql)){
         return true;
     }
-    
     
     return false;
 }

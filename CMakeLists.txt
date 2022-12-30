@@ -5,7 +5,7 @@ project(chat)
 
 # 配置编译选项，-g表示调试
 set(CMAKE_BUILD_TYPE "Debug")
-set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -g)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -g")
 
 # 配置头文件搜索路径
 include_directories(${PROJECT_SOURCE_DIR}/include)

@@ -185,6 +185,7 @@ shared_ptr<MySQL> ConnectionPool::get_connection() {
 
 	// 从队列中获取连接
 	shared_ptr<MySQL> p_conn(_connection_queue.front(), 
+		// lambda表达式的形参是指向资源的裸指针类型
 		[&](MySQL* p) {
 			// 在多线程环境中调用，要考虑队列的线程安全
 			unique_lock<mutex> lock(_queue_mutex);

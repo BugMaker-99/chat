@@ -25,7 +25,7 @@ using MsgHandler = std::function<void(const TcpConnectionPtr&, const json&, cons
 class ChatService{
     public:
         // 获取单例对象的接口函数
-        static shared_ptr<ChatService> getInstance();
+        static ChatService* getInstance();
         // 处理注册业务
         void reg(const TcpConnectionPtr& conn, const json& js, const Timestamp& time);
         // 处理登录业务
@@ -60,7 +60,7 @@ class ChatService{
         // 在构造函数里面把消息id对应的业务处理方法存放到_msgHandlerMap
         ChatService();
 
-        static shared_ptr<ChatService> _service;
+        // static shared_ptr<ChatService> _service;
 
         // 存储消息id和其对应的业务处理方法
         unordered_map<int, MsgHandler> _msgHandlerMap;
@@ -76,7 +76,7 @@ class ChatService{
 
         // 互斥锁保证_userConnMap的线程安全
         mutex _connMutex;
-        // 存储在线用户的连接
+        // 存储在线用户的连接，key：用户的id    value：C和S之间的连接
         unordered_map<int, TcpConnectionPtr> _userConnMap;
 
         //redis操作对象
